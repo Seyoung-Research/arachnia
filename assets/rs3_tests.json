@@ -1,0 +1,422 @@
+[
+ {
+  "context": "GACGAAAGCGACAACGCGTTCATCCGGGCA",
+  "tracr": "Hsu2013",
+  "score": -0.9003094354582534
+ },
+ {
+  "context": "AGAAAACACTAGCATCCCCACCCGCGGACT",
+  "tracr": "Hsu2013",
+  "score": 1.1145162188484359
+ },
+ {
+  "context": "GATCATGGTCTCGGAAAGGTGATTGGAACC",
+  "tracr": "Hsu2013",
+  "score": 0.01658326127836329
+ },
+ {
+  "context": "ATCGACAGTAGACAGCCCCCGTCAAAAAAG",
+  "tracr": "Hsu2013",
+  "score": 0.9906320435520355
+ },
+ {
+  "context": "TTGGCTGGGTGTGGCTGCCCGCGGTCGTCC",
+  "tracr": "Hsu2013",
+  "score": 0.5166166477207152
+ },
+ {
+  "context": "CCGCTCAAAGCCGAGGAACCTCGATATCCC",
+  "tracr": "Hsu2013",
+  "score": 0.449196137045737
+ },
+ {
+  "context": "GCACTCGCTCGAGCGAGTCAATGACTCGTA",
+  "tracr": "Hsu2013",
+  "score": 0.4892021388159812
+ },
+ {
+  "context": "TTCACACGTGAGAATAGGTATTGCCGGCGA",
+  "tracr": "Hsu2013",
+  "score": 0.11323071608573973
+ },
+ {
+  "context": "CACATTTTGCGCCCGTAACCCAAAGTCACG",
+  "tracr": "Hsu2013",
+  "score": -1.0323007482476314
+ },
+ {
+  "context": "TCAGACACACCACCATTTAATTTAGGCTTA",
+  "tracr": "Hsu2013",
+  "score": -1.1946256491032767
+ },
+ {
+  "context": "GCTCTCGGCATCCTAACCTCGTCTTGACAG",
+  "tracr": "Hsu2013",
+  "score": 0.4487627464803947
+ },
+ {
+  "context": "ACATCGATCTTATCTTAGACTAGTGAGATT",
+  "tracr": "Hsu2013",
+  "score": -1.122361805943081
+ },
+ {
+  "context": "TTCTGCGAAGGCGACACCGTGTAGCGCGAG",
+  "tracr": "Hsu2013",
+  "score": 0.7291930932405869
+ },
+ {
+  "context": "CAATGTGGTTATGGTTCGGAACGATTCAGG",
+  "tracr": "Hsu2013",
+  "score": 0.7009241116166972
+ },
+ {
+  "context": "TACAAAGTACGCATGGCCCCGGTACTGTAC",
+  "tracr": "Hsu2013",
+  "score": 0.5971988227933476
+ },
+ {
+  "context": "ACTAGCATTCAGTACATATTTAAATAGGCG",
+  "tracr": "Hsu2013",
+  "score": -1.0516923089020103
+ },
+ {
+  "context": "ACTAGCTATCGCGAGTGGCCCCTATGCGGT",
+  "tracr": "Hsu2013",
+  "score": 0.21873514665104932
+ },
+ {
+  "context": "TTATTTCCGCCCTGCTAACGCTCACCTTGG",
+  "tracr": "Hsu2013",
+  "score": 0.18659847796926052
+ },
+ {
+  "context": "ATGGGTCTTGTAAAATCCTGTCACAACTAC",
+  "tracr": "Hsu2013",
+  "score": 0.2891018475140665
+ },
+ {
+  "context": "GCAATGCTCGTCGTGAAGAGCCTTACGATT",
+  "tracr": "Hsu2013",
+  "score": -0.4208367093121884
+ },
+ {
+  "context": "TCATGAGTAAGAGCACCCACCAAGAGGTTG",
+  "tracr": "Hsu2013",
+  "score": 1.2207378725298381
+ },
+ {
+  "context": "TTATTAAATAAGGCCACTCGCTCCGAAAGT",
+  "tracr": "Hsu2013",
+  "score": 0.44261486033681213
+ },
+ {
+  "context": "CATTTAATTAACTCATCTCCACGGAGGTTG",
+  "tracr": "Hsu2013",
+  "score": 1.3162222006511892
+ },
+ {
+  "context": "GGTTACCCACGCGAGCTCGAGAATGCATGC",
+  "tracr": "Hsu2013",
+  "score": 0.11551397319636167
+ },
+ {
+  "context": "TGCCGTCACCGCTACTACGAGGGCTGGGGA",
+  "tracr": "Hsu2013",
+  "score": -0.10933193552196278
+ },
+ {
+  "context": "CCGAATAGCACTCAACTACCAGCATTCCGT",
+  "tracr": "Hsu2013",
+  "score": 1.190601362463842
+ },
+ {
+  "context": "AAATCGAACCCACGCCGTCTGAATGCTCGG",
+  "tracr": "Hsu2013",
+  "score": -0.10472699441330402
+ },
+ {
+  "context": "ATGGCAGAGAACTACACTAAGCGTAGTGTC",
+  "tracr": "Hsu2013",
+  "score": 0.8761694581278633
+ },
+ {
+  "context": "GGGATCATCGCCACGGGCACGGAGGCGGTA",
+  "tracr": "Hsu2013",
+  "score": 0.6266926356920374
+ },
+ {
+  "context": "GGCAGTAGATGCTGTAGCCACGGACCACCA",
+  "tracr": "Hsu2013",
+  "score": 1.2988648839229475
+ },
+ {
+  "context": "ATGACAGCCAGGGGTTCTACGTGCCTCAGT",
+  "tracr": "Hsu2013",
+  "score": 0.46278914856796777
+ },
+ {
+  "context": "TGCCACCCTATGTCCTAATCCGGGCGACCG",
+  "tracr": "Hsu2013",
+  "score": 0.8818952266853859
+ },
+ {
+  "context": "AGTCACTCGTTAATTGACGTATTTCATCCT",
+  "tracr": "Hsu2013",
+  "score": -1.7373705582758057
+ },
+ {
+  "context": "GATCGCACCGTGGTAAATACTTGTGAACCC",
+  "tracr": "Hsu2013",
+  "score": -0.31673984494239377
+ },
+ {
+  "context": "TCGTGGCAAGCACCCGTTCCTGAACAGCAG",
+  "tracr": "Hsu2013",
+  "score": 0.36366517644815566
+ },
+ {
+  "context": "CCTGGCTCTGGGTTGAGAGTTCGTCGTGCA",
+  "tracr": "Hsu2013",
+  "score": 0.5127548348712088
+ },
+ {
+  "context": "AGATATGCCAATACGCTCGGGATAATCGGC",
+  "tracr": "Hsu2013",
+  "score": -0.6268985174097077
+ },
+ {
+  "context": "GGAGACTCGAGAAGCGAGACAGACCCTACT",
+  "tracr": "Hsu2013",
+  "score": -0.3880424836025312
+ },
+ {
+  "context": "GTCCCCACTCTCTGGGCCCGCGCCGCTTTA",
+  "tracr": "Hsu2013",
+  "score": -0.6266746347440355
+ },
+ {
+  "context": "AGGTAACGGTCCGGGCACGTCGGCCGTGTC",
+  "tracr": "Hsu2013",
+  "score": -0.4404754601904227
+ },
+ {
+  "context": "TGTGTAAAGCCATGTAGTTGACTAAAAGGG",
+  "tracr": "Hsu2013",
+  "score": -0.23372170732167197
+ },
+ {
+  "context": "GCACCAGTAAGCAATGTCTATTAAGATGTC",
+  "tracr": "Hsu2013",
+  "score": -1.24353782588571
+ },
+ {
+  "context": "GACGAAAGCGACAACGCGTTCATCCGGGCA",
+  "tracr": "Chen2013",
+  "score": -0.022648312020885734
+ },
+ {
+  "context": "AGAAAACACTAGCATCCCCACCCGCGGACT",
+  "tracr": "Chen2013",
+  "score": 0.5066916908334754
+ },
+ {
+  "context": "GATCATGGTCTCGGAAAGGTGATTGGAACC",
+  "tracr": "Chen2013",
+  "score": 0.6104840082354287
+ },
+ {
+  "context": "ATCGACAGTAGACAGCCCCCGTCAAAAAAG",
+  "tracr": "Chen2013",
+  "score": 1.2087507676270903
+ },
+ {
+  "context": "TTGGCTGGGTGTGGCTGCCCGCGGTCGTCC",
+  "tracr": "Chen2013",
+  "score": -0.03391862740184922
+ },
+ {
+  "context": "CCGCTCAAAGCCGAGGAACCTCGATATCCC",
+  "tracr": "Chen2013",
+  "score": 0.5847469139948034
+ },
+ {
+  "context": "GCACTCGCTCGAGCGAGTCAATGACTCGTA",
+  "tracr": "Chen2013",
+  "score": 0.45253792457559
+ },
+ {
+  "context": "TTCACACGTGAGAATAGGTATTGCCGGCGA",
+  "tracr": "Chen2013",
+  "score": 0.5338942881902208
+ },
+ {
+  "context": "CACATTTTGCGCCCGTAACCCAAAGTCACG",
+  "tracr": "Chen2013",
+  "score": -0.9892784544628273
+ },
+ {
+  "context": "TCAGACACACCACCATTTAATTTAGGCTTA",
+  "tracr": "Chen2013",
+  "score": -0.19251227820822714
+ },
+ {
+  "context": "GCTCTCGGCATCCTAACCTCGTCTTGACAG",
+  "tracr": "Chen2013",
+  "score": 0.6105854624183169
+ },
+ {
+  "context": "ACATCGATCTTATCTTAGACTAGTGAGATT",
+  "tracr": "Chen2013",
+  "score": -0.8558721447312011
+ },
+ {
+  "context": "TTCTGCGAAGGCGACACCGTGTAGCGCGAG",
+  "tracr": "Chen2013",
+  "score": 0.37127725457667937
+ },
+ {
+  "context": "CAATGTGGTTATGGTTCGGAACGATTCAGG",
+  "tracr": "Chen2013",
+  "score": 0.3409115363178415
+ },
+ {
+  "context": "TACAAAGTACGCATGGCCCCGGTACTGTAC",
+  "tracr": "Chen2013",
+  "score": 1.1035811236137527
+ },
+ {
+  "context": "ACTAGCATTCAGTACATATTTAAATAGGCG",
+  "tracr": "Chen2013",
+  "score": -0.6457756874517832
+ },
+ {
+  "context": "ACTAGCTATCGCGAGTGGCCCCTATGCGGT",
+  "tracr": "Chen2013",
+  "score": 0.5222223129765784
+ },
+ {
+  "context": "TTATTTCCGCCCTGCTAACGCTCACCTTGG",
+  "tracr": "Chen2013",
+  "score": 0.12090541972178796
+ },
+ {
+  "context": "ATGGGTCTTGTAAAATCCTGTCACAACTAC",
+  "tracr": "Chen2013",
+  "score": 0.09313665023775752
+ },
+ {
+  "context": "GCAATGCTCGTCGTGAAGAGCCTTACGATT",
+  "tracr": "Chen2013",
+  "score": -0.3073616909549123
+ },
+ {
+  "context": "TCATGAGTAAGAGCACCCACCAAGAGGTTG",
+  "tracr": "Chen2013",
+  "score": 0.6497154604253089
+ },
+ {
+  "context": "TTATTAAATAAGGCCACTCGCTCCGAAAGT",
+  "tracr": "Chen2013",
+  "score": 0.5273811784873497
+ },
+ {
+  "context": "CATTTAATTAACTCATCTCCACGGAGGTTG",
+  "tracr": "Chen2013",
+  "score": 0.6871661527914166
+ },
+ {
+  "context": "GGTTACCCACGCGAGCTCGAGAATGCATGC",
+  "tracr": "Chen2013",
+  "score": 0.6359169675799172
+ },
+ {
+  "context": "TGCCGTCACCGCTACTACGAGGGCTGGGGA",
+  "tracr": "Chen2013",
+  "score": -0.4185135459949261
+ },
+ {
+  "context": "CCGAATAGCACTCAACTACCAGCATTCCGT",
+  "tracr": "Chen2013",
+  "score": 1.0795895931639243
+ },
+ {
+  "context": "AAATCGAACCCACGCCGTCTGAATGCTCGG",
+  "tracr": "Chen2013",
+  "score": 0.3157331319581374
+ },
+ {
+  "context": "ATGGCAGAGAACTACACTAAGCGTAGTGTC",
+  "tracr": "Chen2013",
+  "score": 0.8206776549955114
+ },
+ {
+  "context": "GGGATCATCGCCACGGGCACGGAGGCGGTA",
+  "tracr": "Chen2013",
+  "score": 0.15717616291503503
+ },
+ {
+  "context": "GGCAGTAGATGCTGTAGCCACGGACCACCA",
+  "tracr": "Chen2013",
+  "score": 1.119282642940514
+ },
+ {
+  "context": "ATGACAGCCAGGGGTTCTACGTGCCTCAGT",
+  "tracr": "Chen2013",
+  "score": 0.5576502550989074
+ },
+ {
+  "context": "TGCCACCCTATGTCCTAATCCGGGCGACCG",
+  "tracr": "Chen2013",
+  "score": 0.26136345447809345
+ },
+ {
+  "context": "AGTCACTCGTTAATTGACGTATTTCATCCT",
+  "tracr": "Chen2013",
+  "score": -1.0076569140292058
+ },
+ {
+  "context": "GATCGCACCGTGGTAAATACTTGTGAACCC",
+  "tracr": "Chen2013",
+  "score": 0.07354531760589747
+ },
+ {
+  "context": "TCGTGGCAAGCACCCGTTCCTGAACAGCAG",
+  "tracr": "Chen2013",
+  "score": 0.5485683182078288
+ },
+ {
+  "context": "CCTGGCTCTGGGTTGAGAGTTCGTCGTGCA",
+  "tracr": "Chen2013",
+  "score": 0.6347875558572372
+ },
+ {
+  "context": "AGATATGCCAATACGCTCGGGATAATCGGC",
+  "tracr": "Chen2013",
+  "score": -0.2645327031300429
+ },
+ {
+  "context": "GGAGACTCGAGAAGCGAGACAGACCCTACT",
+  "tracr": "Chen2013",
+  "score": -0.2615306564024705
+ },
+ {
+  "context": "GTCCCCACTCTCTGGGCCCGCGCCGCTTTA",
+  "tracr": "Chen2013",
+  "score": -0.7323365714574385
+ },
+ {
+  "context": "AGGTAACGGTCCGGGCACGTCGGCCGTGTC",
+  "tracr": "Chen2013",
+  "score": -0.46482780226487685
+ },
+ {
+  "context": "TGTGTAAAGCCATGTAGTTGACTAAAAGGG",
+  "tracr": "Chen2013",
+  "score": -0.2889887537679924
+ },
+ {
+  "context": "GCACCAGTAAGCAATGTCTATTAAGATGTC",
+  "tracr": "Chen2013",
+  "score": -0.4379053352576484
+ }
+]

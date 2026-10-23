@@ -1,0 +1,9 @@
+/target
+/.refs
+*.ppm
+arachnia_guides.tsv
+arachnia_offtargets*.tsv
+/hg38.fa
+/hg38.fa.gz
+/genomes/
+.DS_Store
