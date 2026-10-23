@@ -32,8 +32,14 @@ code, and the off-target search engine are embedded in the application.
   Search the current target sequence or a loaded FASTA reference, with
   background loading/search, progress and cancellation. A local hg38 is
   auto-detected and preselected; `scripts/fetch_hg38.sh` installs it.
+- Optional **chromosome-region annotation** from a GTF/GFF3 file. Each
+  off-target is labelled promoter, exon, coding exon, 5′/3′ UTR, intron, gene
+  body or intergenic, with its overlapping gene. Promoters are defined as
+  500 bp to 5 kb upstream of a transcription start site. Install a GENCODE
+  annotation with `scripts/fetch_annotation.sh`.
 - Export visible on-target results or off-target sites as TSV. Off-target TSV
-  uses Cas-OFFinder's columns and 0-based locations.
+  uses Cas-OFFinder's columns and 0-based locations, with optional `Region` and
+  `Gene` columns when annotation is loaded.
 - Built-in TP53 CDS demo, so the app is useful immediately.
 - Offline and self-contained: the RuleSet3 ensemble and SeqDeepCpf1 weights
   are embedded in the binary.
@@ -90,7 +96,8 @@ take a few minutes.
 6. Click **Off-targets…** in the selected-guide panel to open the off-target
    window. Choose the PAM pattern and mismatch limit, then search the current
    target sequence or a reference genome. If hg38 is installed locally, the
-   window preselects it; **Use hg38** loads it in one click.
+   window preselects it; **Use hg38** loads it in one click. Load a GTF/GFF3
+   file in the same window to add region and gene labels.
 
 The guide sequence and PAM are presented in guide orientation (5′→3′), so a
 Cas9 PAM always reads `NGG` and a Cpf1 PAM always reads `TTTV`. On the minus
@@ -134,6 +141,63 @@ Cas-OFFinder model:
 Results can be copied or exported as Cas-OFFinder-compatible TSV with the
 columns `Id`, `Bulge Type`, `crRNA`, `DNA`, `Chromosome`, `Location`,
 `Direction`, `Mismatches` and `Bulge Size`.
+
+### Chromosome-region annotation
+
+Load a GTF or GFF3 file in the off-target window to label every site with a
+`Region` and `Gene` (and, for TSV export, the same two extra columns). Both
+1-based inclusive formats are accepted, including GFF3 `Parent` chains and GTF
+records with `gene_id`/`transcript_id` attributes. Compressed `.gz` files are
+not supported; decompress them first.
+
+Regions are assigned from the full guide + PAM window (not just its left edge)
+using this precedence:
+
+1. coding exon (`CDS`)
+2. 5′ UTR and 3′ UTR
+3. exon
+4. promoter
+5. intron
+6. gene body
+7. intergenic
+
+A **promoter** is defined as the interval from **5 kb to 500 bp upstream of a
+transcription start site (TSS)**. The 500 bp immediately upstream of the TSS
+and the region beyond 5 kb are not part of the promoter. On the minus strand,
+"upstream" is at higher plus-strand coordinates. When several transcripts
+overlap a site, the most specific region wins; ties go to the shortest
+interval, then the closest TSS, then the gene name. UTRs are inferred from CDS
+and exon coordinates when the annotation does not provide explicit UTR
+records.
+
+Set `ARACHNIA_ANNOTATION` to a GTF/GFF3 path to pre-fill the annotation field.
+A local annotation is auto-detected as `hg38.gtf`, `hg38.gff3`,
+`annotation.gtf`, `annotation.gff3`, `gencode.annotation.gtf` or
+`gencode.annotation.gff3` in the hg38 data directories. Set
+`ARACHNIA_ANNOTATION_DIR` to search an additional directory.
+
+To install a GENCODE hg38 annotation:
+
+```bash
+./scripts/fetch_annotation.sh
+```
+
+The script finds the latest GENCODE human release, verifies the file against
+the release's `MD5SUMS`, decompresses it, and writes
+`${XDG_DATA_HOME:-$HOME/.local/share}/arachnia/gencode.annotation.gtf`, where
+Arachnia detects it automatically. It is idempotent and supports these
+environment overrides:
+
+- `ARACHNIA_ANNOTATION_DIR` — destination directory.
+- `ARACHNIA_ANNOTATION_FORMAT` — `gtf` (default) or `gff3`.
+- `ARACHNIA_ANNOTATION_KIND` — `all` (default), `basic` or
+  `primary_assembly`. The basic annotation is smaller and uses less memory.
+- `ARACHNIA_GENCODE_RELEASE` — pin a release, for example `49`.
+- `ARACHNIA_ANNOTATION_URL` and `ARACHNIA_ANNOTATION_MD5_URL` — install a
+  custom gzip-compressed annotation instead.
+
+The CLI still needs the installed path passed with `--annotation` or
+`ARACHNIA_ANNOTATION`.
 
 ### Using hg38
 
@@ -187,6 +251,17 @@ Run it with a Cas-OFFinder-style input file:
 ```bash
 ./target/release/cas-offinder input.txt -            # TSV to stdout
 ./target/release/cas-offinder input.txt C out.tsv    # device argument accepted, ignored
+./target/release/cas-offinder --annotation gencode.gtf input.txt -  # add Region/Gene
+```
+
+The annotation path can also be set with `ARACHNIA_ANNOTATION`. When it is
+provided, the TSV header gains `Region` and `Gene` columns after `Bulge Size`.
+Compressed annotation files are not supported; `scripts/fetch_annotation.sh`
+installs a decompressed GENCODE file, for example:
+
+```bash
+./target/release/cas-offinder \
+  --annotation ~/.local/share/arachnia/gencode.annotation.gtf input.txt -
 ```
 
 Input format:
@@ -212,9 +287,10 @@ NNNNAATGGAGTCGTGAGCGCAAGAAC 3 cpf1_guide
 ```
 
 The CLI writes the same TSV columns as the GUI, including the `##Generated by
-Arachnia` comment line. The optional device argument (`C`, `G`, `A`, or a
-device list) is accepted for Cas-OFFinder command-line compatibility; the Rust
-implementation always uses the CPU via Rayon.
+Arachnia` comment line and the optional `Region`/`Gene` columns when annotation
+is loaded. The optional device argument (`C`, `G`, `A`, or a device list) is
+accepted for Cas-OFFinder command-line compatibility; the Rust implementation
+always uses the CPU via Rayon.
 
 ## Scoring details
 
@@ -309,7 +385,9 @@ The script writes:
   bulges are not considered, and no CFSS or variant-aware scoring is computed.
   Results are capped at 200,000 sites per search.
 - Genome-wide searches load the reference into memory; compressed FASTA files
-  are not supported.
+  are not supported. Annotation files must also be uncompressed GTF/GFF3.
+- Region annotation is transcript-model based and does not consider regulatory
+  elements other than the defined TSS promoters.
 - Rule Set 3 is used in **sequence mode**. The optional target-context model in
   the upstream package is not included.
 - Cut positions are approximate. Cas9 cuts 3 bp upstream of the PAM; Cpf1

@@ -32,6 +32,27 @@ fn run(input: &str, genome: &str, label: &str) -> Output {
         .unwrap()
 }
 
+fn run_with_annotation(input: &str, genome: &str, annotation: &str, label: &str) -> Output {
+    let dir = temp_dir(label);
+    let genome_path = dir.join("genome.fa");
+    let input_path = dir.join("input.txt");
+    let annotation_path = dir.join("annotation.gtf");
+    fs::write(&genome_path, genome).unwrap();
+    fs::write(&annotation_path, annotation).unwrap();
+    fs::write(
+        &input_path,
+        input.replace("{genome}", &genome_path.display().to_string()),
+    )
+    .unwrap();
+    Command::new(env!("CARGO_BIN_EXE_cas-offinder"))
+        .arg("--annotation")
+        .arg(&annotation_path)
+        .arg(&input_path)
+        .arg("-")
+        .output()
+        .unwrap()
+}
+
 fn rows(output: &Output) -> Vec<Vec<String>> {
     let stdout = String::from_utf8(output.stdout.clone()).unwrap();
     stdout
@@ -166,6 +187,42 @@ fn bulge_sizes_are_rejected() {
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("bulges are not supported"), "{stderr}");
+}
+
+#[test]
+fn annotation_adds_region_and_gene_columns() {
+    let guide = "ACGTACGTACGTACGTACGT";
+    let site = 10_050;
+    let genome = format!(
+        ">chr1 test\n{}{}TGG{}\n",
+        "A".repeat(site),
+        guide,
+        "A".repeat(20),
+    );
+    let annotation = "\
+chr1\ttest\tgene\t10001\t11000\t.\t+\t.\tgene_id \"G1\"; gene_name \"GeneA\";
+chr1\ttest\ttranscript\t10001\t11000\t.\t+\t.\tgene_id \"G1\"; transcript_id \"T1\"; gene_name \"GeneA\";
+chr1\ttest\texon\t10001\t11000\t.\t+\t.\tgene_id \"G1\"; transcript_id \"T1\";
+";
+    let input = format!("{{genome}}\nNNNNNNNNNNNNNNNNNNNNNGG\n{guide}NNN 0 annotated\n");
+    let output = run_with_annotation(&input, &genome, annotation, "annotated");
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let mut lines = stdout.lines();
+    lines.next();
+    assert_eq!(
+        lines.next().unwrap(),
+        "#Id\tBulge Type\tcrRNA\tDNA\tChromosome\tLocation\tDirection\tMismatches\tBulge Size\tRegion\tGene"
+    );
+    let fields: Vec<&str> = lines.next().unwrap().split('\t').collect();
+    assert_eq!(fields.len(), 11);
+    assert_eq!(fields[5], site.to_string());
+    assert_eq!(fields[9], "exon");
+    assert_eq!(fields[10], "GeneA");
 }
 
 #[test]

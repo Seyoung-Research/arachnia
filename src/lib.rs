@@ -46,7 +46,11 @@
 //! * Streaming multi-record FASTA loading from a file or a directory.
 //! * Optional local hg38 discovery via [`offtarget::find_hg38`] and the
 //!   `hg38`/`GRCh38` shorthand accepted by the CLI.
-//! * Cas-OFFinder-compatible TSV export.
+//! * Optional chromosome-region annotation from GTF/GFF3: promoter, exon,
+//!   coding exon, 5′/3′ UTR, intron, gene body or intergenic, with the
+//!   overlapping gene. Promoters are 500 bp to 5 kb upstream of a TSS.
+//! * Cas-OFFinder-compatible TSV export, with optional `Region`/`Gene`
+//!   columns when annotation is loaded.
 //!
 //! DNA and RNA **bulges are not supported**. The search is intentionally
 //! mismatch-only and exact-PAM.
@@ -64,11 +68,14 @@
 //!   site, copy actions and an **Off-targets…** action.
 //! * An off-target window with PAM pattern, mismatch limit, both-strands
 //!   toggle, current-target or reference-genome search, background loading and
-//!   cancellation, ranked mismatch table, mismatch highlighting, and copy or
-//!   export of Cas-OFFinder-compatible TSV.
+//!   cancellation, ranked mismatch table, mismatch highlighting, optional
+//!   GTF/GFF3 region annotation, and copy or export of Cas-OFFinder-compatible
+//!   TSV.
 //! * A local hg38 reference is detected and preselected when present. Install
 //!   one with `scripts/fetch_hg38.sh`; the app loads it on demand in a
 //!   background thread.
+//! * A local GTF/GFF3 annotation is detected automatically. Install a GENCODE
+//!   file with `scripts/fetch_annotation.sh`.
 //!
 //! ### Desktop workflow
 //!
@@ -86,8 +93,9 @@
 //!    **Copy context**, **Copy TSV**, **Export TSV…** and **Off-targets…**.
 //! 6. In the off-target window, set the PAM pattern, mismatch limit and
 //!    both-strands toggle, then search the current target sequence or a
-//!    reference genome. Genome loading and searching run in the background
-//!    with progress and **Cancel**.
+//!    reference genome. Load a GTF/GFF3 annotation to add `Region`/`Gene`
+//!    labels; genome loading and searching run in the background with progress
+//!    and **Cancel**.
 //! 7. Copy or export the ranked off-target table as Cas-OFFinder-compatible
 //!    TSV.
 //!
@@ -154,6 +162,25 @@
 //!
 //! The GUI preselects a discovered hg38 but loads it only when **Load** or
 //! **Use hg38** is clicked, because the FASTA occupies about 3.1 GiB of RAM.
+//!
+//! ## Gene annotation setup
+//!
+//! Arachnia does not bundle a gene annotation. Install a GENCODE human
+//! annotation with:
+//!
+//! ```console
+//! ./scripts/fetch_annotation.sh
+//! ```
+//!
+//! The script finds the latest GENCODE release, verifies the annotation
+//! against the release's `MD5SUMS`, decompresses it, and writes
+//! `${XDG_DATA_HOME:-$HOME/.local/share}/arachnia/gencode.annotation.gtf`. The
+//! GUI detects this file automatically. The script accepts `gtf` or `gff3`
+//! output via `ARACHNIA_ANNOTATION_FORMAT`, an `all`/`basic`/`primary_assembly`
+//! annotation via `ARACHNIA_ANNOTATION_KIND`, and a pinned release via
+//! `ARACHNIA_GENCODE_RELEASE`. `ARACHNIA_ANNOTATION_DIR` changes the
+//! destination and is also searched by annotation discovery. The CLI still
+//! requires `--annotation` or `ARACHNIA_ANNOTATION`.
 //!
 //! ## On-target scoring and filters
 //!
@@ -254,7 +281,9 @@
 //! `Location` is 0-based and refers to the plus-strand left edge of the
 //! guide + PAM window. `crRNA` uses `N`s for PAM positions; `DNA` contains the
 //! actual guide-oriented reference sequence and PAM. `Bulge Type` is always
-//! `X`, and `Bulge Size` is always `0`.
+//! `X`, and `Bulge Size` is always `0`. When sites carry an
+//! [`annotation::SiteAnnotation`], `Region` and `Gene` columns are appended
+//! automatically.
 //!
 //! # Documentation map
 //!
@@ -264,6 +293,8 @@
 //! * [`cpf1`] — SeqDeepCpf1 CNN inference for Cpf1/Cas12a.
 //! * [`tm`] — Biopython-compatible nearest-neighbour melting temperatures used
 //!   by Rule Set 3.
+//! * [`annotation`] — GTF/GFF3 parsing, TSS promoter intervals and
+//!   off-target region labels.
 //! * [`offtarget`] — genome loading, hg38 discovery, packed off-target search,
 //!   progress/cancellation and Cas-OFFinder TSV output.
 //!
@@ -277,6 +308,9 @@
 //!   and refer to the left edge of the guide + PAM window on the plus strand,
 //!   matching Cas-OFFinder and Bowtie. The guide-oriented DNA and PAM are
 //!   reported separately.
+//! * [`annotation::Annotation`] stores 0-based half-open intervals converted
+//!   from 1-based GTF/GFF3 records. Off-target labels use the full guide + PAM
+//!   window. A promoter spans 500 bp to 5 kb upstream of a TSS.
 //!
 //! # Performance and memory
 //!
@@ -335,6 +369,9 @@
 //!
 //! * Off-target search is mismatch-only: PAMs must match exactly and DNA/RNA
 //!   bulges are not modelled.
+//! * Region annotation uses GTF/GFF3 transcript models. Compressed annotation
+//!   files are not supported, and regulatory elements other than the defined
+//!   TSS promoters are not annotated.
 //! * Genome-wide searches load the reference into memory; compressed FASTA is
 //!   not supported. hg38 needs roughly 3.1 GiB of RAM.
 //! * Rule Set 3 is used in sequence mode; the upstream target-context model is
@@ -348,12 +385,14 @@
 
 #![warn(missing_docs)]
 
+pub mod annotation;
 pub mod cpf1;
 pub mod design;
 pub mod offtarget;
 pub mod ruleset3;
 pub mod tm;
 
+pub use annotation::{Annotation, AnnotationError, Region, SiteAnnotation};
 pub use design::{
     design, design_bases, prepare_sequence, results_tsv, reverse_complement, DesignResult,
     DnaError, Enzyme, Filters, GuideCandidate, PreparedSequence, Strand,

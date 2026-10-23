@@ -82,6 +82,19 @@ The full BSD-3-Clause license is in
 - Usage is subject to the
   [UCSC Genome Browser data usage policy](https://genome.ucsc.edu/license/).
 
+## GENCODE annotation data
+
+- Source: GENCODE human (GRCh38/hg38) GTF/GFF3 annotation
+- URL: <https://www.gencodegenes.org/human/>
+- Relationship: the annotation is **not** bundled in the repository or
+  binaries. `scripts/fetch_annotation.sh` downloads and decompresses it on
+  demand into the user's data directory.
+- Citation: Frankish et al., “GENCODE reference annotation for the human and
+  mouse genomes”, *Nucleic Acids Research* (2019),
+  <https://doi.org/10.1093/nar/gky955>.
+- Usage is subject to the
+  [EMBL-EBI Terms of Use](https://www.ebi.ac.uk/about/terms-of-use/).
+
 ## GUI and runtime dependencies
 
 Arachnia uses the following crates under their respective permissive licenses:

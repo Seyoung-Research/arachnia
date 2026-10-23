@@ -8,10 +8,13 @@
 //! # Usage
 //!
 //! ```text
-//! cas-offinder <input.txt|-> [C|G|A[device_ids]] [output.tsv|-]
+//! cas-offinder [--annotation <GTF|GFF3>] <input.txt|-> [C|G|A[device_ids]] [output.tsv|-]
 //! ```
 //!
 //! * `<input.txt|->` — input file, or `-` to read from standard input.
+//! * `--annotation` — optional GTF/GFF3 gene annotation. Adds `Region` and
+//!   `Gene` columns. The path can also be set with `ARACHNIA_ANNOTATION`.
+//!   `scripts/fetch_annotation.sh` downloads and installs a GENCODE file.
 //! * `[C|G|A[device_ids]]` — accepted for Cas-OFFinder compatibility and
 //!   ignored. The Rust implementation always uses the CPU via Rayon.
 //! * `[output.tsv|-]` — output path, or `-`/omitted for standard output.
@@ -87,6 +90,9 @@
 //! * `Direction` — `+` or `-`.
 //! * `Mismatches` — Hamming mismatches over the guide only.
 //! * `Bulge Size` — always `0`.
+//! * `Region`, `Gene` — appended only when `--annotation` is used. Region is
+//!   one of promoter, exon, coding exon, 5′ UTR, 3′ UTR, intron, gene body or
+//!   intergenic. Promoters span 500 bp to 5 kb upstream of a TSS.
 //!
 //! # Examples
 //!
@@ -134,9 +140,11 @@ use std::io::Read;
 use std::process::ExitCode;
 use std::time::Instant;
 
+use arachnia::annotation::{Annotation, ANNOTATION_ENV};
 use arachnia::offtarget::{
-    expand_tilde, resolve_reference_path, results_tsv_header, results_tsv_rows, search_offtargets,
-    validate_search, Genome, OffTargetParams, PamSide, SearchControl,
+    expand_tilde, resolve_reference_path, results_tsv_header, results_tsv_header_with_annotation,
+    results_tsv_rows, search_offtargets, validate_search, Genome, OffTargetParams, PamSide,
+    SearchControl,
 };
 
 /// Run the CLI and convert errors into a process exit status.
@@ -155,12 +163,15 @@ fn usage() {
     eprintln!(
         "Cas-OFFinder-compatible off-target search (Rust)\n\
          \n\
-         Usage: cas-offinder <input.txt|-> [C|G|A[device_ids]] [output.tsv|-]\n\
+         Usage: cas-offinder [--annotation <GTF|GFF3>] <input.txt|-> [C|G|A[device_ids]] [output.tsv|-]\n\
          \n\
          Input format:\n\
            <hg38|genome.fa|directory>\n\
            <pattern> [dna_bulge] [rna_bulge]\n\
            <query> <max_mismatches> [id]\n\
+         \n\
+         --annotation adds Region and Gene columns. The path can also be set\n\
+         with {ANNOTATION_ENV}.\n\
          \n\
          hg38/GRCh38 is resolved from ARACHNIA_HG38, ARACHNIA_HG38_DIR, or\n\
          standard data directories. Cas9 queries end with PAM wildcards\n\
@@ -175,7 +186,34 @@ fn usage() {
 /// Returns a human-readable error suitable for the `Error:` prefix printed by
 /// [`main`]. Progress and diagnostics are written to standard error.
 fn run() -> Result<(), String> {
-    let mut args: Vec<String> = env::args().skip(1).collect();
+    let arguments: Vec<String> = env::args().skip(1).collect();
+    let mut annotation_path: Option<String> = env::var(ANNOTATION_ENV)
+        .ok()
+        .filter(|path| !path.trim().is_empty());
+    let mut positional = Vec::new();
+    let mut index = 0;
+    while index < arguments.len() {
+        let argument = arguments[index].as_str();
+        match argument {
+            "--help" | "-h" => {
+                usage();
+                return Ok(());
+            }
+            "--annotation" | "-a" => {
+                index += 1;
+                let path = arguments
+                    .get(index)
+                    .ok_or_else(|| "--annotation requires a GTF/GFF3 path".to_string())?;
+                annotation_path = Some(path.clone());
+            }
+            _ if argument.starts_with("--annotation=") => {
+                annotation_path = Some(argument["--annotation=".len()..].to_string());
+            }
+            _ => positional.push(arguments[index].clone()),
+        }
+        index += 1;
+    }
+    let mut args = positional;
     if args.is_empty() {
         usage();
         return Err("missing input file".into());
@@ -246,7 +284,28 @@ fn run() -> Result<(), String> {
         genome.total_bases()
     );
 
-    let mut output = String::from(results_tsv_header());
+    let annotation = match annotation_path {
+        Some(path) => {
+            let path = expand_tilde(std::path::PathBuf::from(path));
+            eprintln!("Loading annotation {} …", path.display());
+            let annotation = Annotation::from_path(&path)
+                .map_err(|err| format!("could not load {}: {err}", path.display()))?;
+            eprintln!(
+                "Loaded {} gene(s), {} transcript(s), {} feature(s)",
+                annotation.gene_count(),
+                annotation.transcript_count(),
+                annotation.feature_count()
+            );
+            Some(annotation)
+        }
+        None => None,
+    };
+
+    let mut output = String::from(if annotation.is_some() {
+        results_tsv_header_with_annotation()
+    } else {
+        results_tsv_header()
+    });
     let mut query_count = 0usize;
     for (line_index, line) in lines.enumerate() {
         let tokens: Vec<&str> = line.split_whitespace().collect();
@@ -342,8 +401,11 @@ fn run() -> Result<(), String> {
             max_mismatches
         );
         let started = Instant::now();
-        let result = search_offtargets(guide, &genome, &params, &SearchControl::new())
+        let mut result = search_offtargets(guide, &genome, &params, &SearchControl::new())
             .map_err(|err| format!("query line {}: {err}", line_index + 1))?;
+        if let Some(annotation) = &annotation {
+            result.annotate(annotation);
+        }
         eprintln!(
             "[{}] {} site(s), {} perfect, {:.2} s",
             id,

@@ -25,7 +25,9 @@
 //!    both-strands toggle, and search either the current target sequence or a
 //!    reference genome. Genome loading and searching run in background threads
 //!    with progress and cancellation.
-//! 7. Ranked hits show mismatch counts, strand, 0-based location and the
+//! 7. Optionally load a GTF/GFF3 file to annotate each hit with its chromosome
+//!    region and gene. Promoters are 500 bp to 5 kb upstream of a TSS.
+//! 8. Ranked hits show mismatch counts, strand, 0-based location and the
 //!    guide-oriented DNA with mismatches in lower case. Copy or export the
 //!    results as Cas-OFFinder-compatible TSV.
 //!
@@ -47,11 +49,16 @@
 //!   and Cas-OFFinder/Bowtie 0-based location conventions.
 //! * Background genome loading and searching with progress and cancel.
 //! * Ranked mismatch table with lower-case mismatch highlighting.
+//! * Optional GTF/GFF3 region annotation (promoter, exon, UTR, intron,
+//!   intergenic) with the overlapping gene.
 //! * Copy/export Cas-OFFinder-compatible TSV.
 //! * hg38 is detected from `ARACHNIA_HG38`, `ARACHNIA_HG38_DIR`, XDG data
 //!   directories and common genome folders. Install it with
 //!   `scripts/fetch_hg38.sh`; the GUI loads it only when requested, because a
 //!   whole hg38 reference uses about 3.1 GiB of RAM.
+//! * A GTF/GFF3 annotation is detected from `ARACHNIA_ANNOTATION`, hg38
+//!   directories and common genome folders. Install a GENCODE file with
+//!   `scripts/fetch_annotation.sh`.
 //!
 //! # Visual design
 //!
@@ -63,7 +70,8 @@
 //!
 //! * DNA/RNA bulges are not supported in off-target search.
 //! * Compressed FASTA is not supported.
-//! * hg38 is not bundled; it must be installed locally.
+//! * hg38 and gene annotations are not bundled; they must be installed
+//!   locally.
 //! * Cut positions are approximate and scores are design aids, not measured
 //!   editing efficiencies.
 //!
@@ -1323,7 +1331,7 @@ impl ArachniaApp {
                     ui.add_space(6.0);
                     ui.label(
                         RichText::new(
-                            "Select a guide and press Off-targets… to scan the current sequence or a loaded FASTA genome for every exact-PAM site within a chosen Hamming distance. A local hg38 reference is detected and preselected when available (install it with scripts/fetch_hg38.sh). The search follows Cas-OFFinder's mismatch model and reports 0-based locations on both strands.",
+                            "Select a guide and press Off-targets… to scan the current sequence or a loaded FASTA genome for every exact-PAM site within a chosen Hamming distance. A local hg38 reference is detected and preselected when available (install it with scripts/fetch_hg38.sh). Load a GTF/GFF3 file in the same window to add Region and Gene labels; install a GENCODE annotation with scripts/fetch_annotation.sh. The search follows Cas-OFFinder's mismatch model and reports 0-based locations on both strands.",
                         )
                         .size(12.0),
                     );

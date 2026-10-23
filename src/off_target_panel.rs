@@ -16,6 +16,12 @@
 //! sortable table with lower-case mismatch highlighting and can be copied or
 //! exported as Cas-OFFinder-compatible TSV.
 //!
+//! An optional GTF/GFF3 annotation can be loaded alongside the reference. Each
+//! site is then labelled with its chromosome region and overlapping gene. A
+//! promoter is defined as 500 bp to 5 kb upstream of a transcription start
+//! site. Install a GENCODE annotation with `scripts/fetch_annotation.sh`; the
+//! field is pre-filled when one is discovered.
+//!
 //! The panel deliberately never loads hg38 automatically: a discovered
 //! reference is preselected, but the user must click **Load** or **Use hg38**
 //! because the assembly occupies about 3.1 GiB of RAM.
@@ -27,6 +33,7 @@ use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use arachnia::annotation::{find_hg38_annotation, Annotation, Region};
 use arachnia::offtarget::{
     expand_tilde, find_hg38, resolve_reference_path, results_tsv, search_offtargets,
     validate_search, Genome, OffTargetParams, OffTargetResult, PamSide, SearchControl, SearchError,
@@ -47,6 +54,8 @@ struct SearchState {
 #[derive(Default)]
 struct Actions {
     load_genome: bool,
+    load_annotation: bool,
+    clear_annotation: bool,
     search: bool,
     cancel: bool,
 }
@@ -65,6 +74,12 @@ pub(crate) struct OffTargetPanel {
     genome_summary: String,
     genome_load: Option<Receiver<(String, Result<Genome, String>)>>,
     genome_error: Option<String>,
+    annotation_path: String,
+    annotation: Option<Arc<Annotation>>,
+    annotation_source: String,
+    annotation_summary: String,
+    annotation_load: Option<Receiver<(String, Result<Annotation, String>)>>,
+    annotation_error: Option<String>,
     search: Option<SearchState>,
     result: Option<OffTargetResult>,
     result_pam_len: usize,
@@ -80,6 +95,7 @@ pub(crate) struct OffTargetPanel {
 impl Default for OffTargetPanel {
     fn default() -> Self {
         let hg38 = find_hg38();
+        let annotation = find_hg38_annotation();
         Self {
             open: false,
             candidate: None,
@@ -97,6 +113,15 @@ impl Default for OffTargetPanel {
             genome_summary: String::new(),
             genome_load: None,
             genome_error: None,
+            annotation_path: annotation
+                .as_ref()
+                .map(|path| path.display().to_string())
+                .unwrap_or_default(),
+            annotation: None,
+            annotation_source: String::new(),
+            annotation_summary: String::new(),
+            annotation_load: None,
+            annotation_error: None,
             search: None,
             result: None,
             result_pam_len: 3,
@@ -157,9 +182,9 @@ impl OffTargetPanel {
             .open(&mut open)
             .resizable(true)
             .collapsible(false)
-            .default_size([1120.0, 740.0])
-            .min_width(980.0)
-            .min_height(500.0)
+            .default_size([1_220.0, 780.0])
+            .min_width(1_080.0)
+            .min_height(540.0)
             .show(ctx, |ui| {
                 self.contents(ui, target_sequence, &mut actions);
             });
@@ -175,6 +200,12 @@ impl OffTargetPanel {
         }
         if actions.load_genome {
             self.start_genome_load(ctx);
+        }
+        if actions.load_annotation {
+            self.start_annotation_load(ctx);
+        }
+        if actions.clear_annotation {
+            self.clear_annotation();
         }
         if actions.search {
             self.start_search(target_sequence, ctx);
@@ -220,12 +251,51 @@ impl OffTargetPanel {
             None => {}
         }
 
+        let annotated = self
+            .annotation_load
+            .as_ref()
+            .map(|receiver| receiver.try_recv());
+        match annotated {
+            Some(Ok((path, Ok(annotation)))) => {
+                self.annotation_summary = format!(
+                    "{} genes · {} transcripts · {} regions",
+                    annotation.gene_count(),
+                    annotation.transcript_count(),
+                    annotation.feature_count()
+                );
+                let annotation = Arc::new(annotation);
+                self.annotation = Some(Arc::clone(&annotation));
+                self.annotation_source = path;
+                self.annotation_error = None;
+                self.annotation_load = None;
+                if let Some(result) = &mut self.result {
+                    result.annotate(&annotation);
+                }
+                self.status = "Gene annotation loaded".to_string();
+            }
+            Some(Ok((path, Err(err)))) => {
+                self.annotation_error = Some(format!("Could not load {path}: {err}"));
+                self.annotation_load = None;
+            }
+            Some(Err(TryRecvError::Disconnected)) => {
+                self.annotation_error = Some("Annotation loader stopped unexpectedly".to_string());
+                self.annotation_load = None;
+            }
+            Some(Err(TryRecvError::Empty)) => {
+                ctx.request_repaint_after(Duration::from_millis(150));
+            }
+            None => {}
+        }
+
         let received = self
             .search
             .as_ref()
             .map(|state| (state.started, state.rx.try_recv()));
         match received {
-            Some((started, Ok(Ok(result)))) => {
+            Some((started, Ok(Ok(mut result)))) => {
+                if let Some(annotation) = &self.annotation {
+                    result.annotate(annotation);
+                }
                 self.status = format!(
                     "{} site{} found in {:.2} s",
                     result.sites.len(),
@@ -424,6 +494,51 @@ impl OffTargetPanel {
                         .color(MUTED),
                     );
                 }
+
+                ui.add_space(6.0);
+                ui.separator();
+                ui.add_space(4.0);
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Gene annotation")
+                            .size(12.0)
+                            .color(MUTED),
+                    );
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.annotation_path)
+                            .desired_width(520.0)
+                            .hint_text("/path/to/annotation.gtf or annotation.gff3"),
+                    );
+                    if self.annotation_load.is_some() {
+                        ui.spinner();
+                        ui.label(RichText::new("Loading…").size(10.5).color(MUTED));
+                    } else if ui.button("Load").clicked() {
+                        actions.load_annotation = true;
+                    }
+                    if self.annotation.is_some() && ui.button("Clear").clicked() {
+                        actions.clear_annotation = true;
+                    }
+                });
+                if let Some(error) = &self.annotation_error {
+                    ui.label(RichText::new(error).size(10.5).color(RED));
+                } else if !self.annotation_summary.is_empty() {
+                    ui.label(
+                        RichText::new(format!(
+                            "{} · {} · promoter = 500 bp–5 kb upstream of a TSS",
+                            self.annotation_summary, self.annotation_source
+                        ))
+                        .size(10.0)
+                        .color(MUTED),
+                    );
+                } else {
+                    ui.label(
+                        RichText::new(
+                            "Optional GTF/GFF3 gene models. Sites are labelled promoter, exon, coding exon, 5′/3′ UTR, intron, gene body or intergenic. Install a GENCODE file with scripts/fetch_annotation.sh.",
+                        )
+                        .size(10.0)
+                        .color(MUTED),
+                    );
+                }
             });
 
         ui.add_space(4.0);
@@ -498,6 +613,15 @@ impl OffTargetPanel {
                 .size(9.5)
                 .color(MUTED),
             );
+            if result.sites.iter().any(|site| site.annotation.is_some()) {
+                ui.label(
+                    RichText::new(
+                        "Region labels use the full guide + PAM window. Promoter = 500 bp to 5 kb upstream of a transcription start site.",
+                    )
+                    .size(9.5)
+                    .color(MUTED),
+                );
+            }
             self.result = Some(result);
         } else if !running {
             ui.add_space(26.0);
@@ -712,6 +836,39 @@ impl OffTargetPanel {
         ctx.request_repaint();
     }
 
+    fn start_annotation_load(&mut self, ctx: &egui::Context) {
+        let raw_path = self.annotation_path.trim().to_string();
+        if raw_path.is_empty() {
+            self.annotation_error = Some("Enter a GTF/GFF3 path first.".to_string());
+            return;
+        }
+        let path = expand_tilde(std::path::PathBuf::from(raw_path));
+        let path = path.display().to_string();
+        let (tx, rx) = mpsc::channel();
+        let path_for_thread = path.clone();
+        std::thread::spawn(move || {
+            let result =
+                Annotation::from_path(Path::new(&path_for_thread)).map_err(|err| err.to_string());
+            let _ = tx.send((path, result));
+        });
+        self.annotation_error = None;
+        self.status = "Loading gene annotation…".to_string();
+        self.annotation_load = Some(rx);
+        ctx.request_repaint();
+    }
+
+    fn clear_annotation(&mut self) {
+        self.annotation = None;
+        self.annotation_load = None;
+        self.annotation_source.clear();
+        self.annotation_summary.clear();
+        self.annotation_error = None;
+        if let Some(result) = &mut self.result {
+            result.clear_annotations();
+        }
+        self.status = "Gene annotation cleared".to_string();
+    }
+
     fn cancel_search(&mut self) {
         if let Some(search) = &self.search {
             search.control.cancel();
@@ -732,8 +889,13 @@ impl OffTargetPanel {
             .show(ctx, |ui| {
                 ui.label(
                     RichText::new(format!(
-                        "{count} site{} in Cas-OFFinder-compatible TSV format:",
-                        if count == 1 { "" } else { "s" }
+                        "{count} site{} in Cas-OFFinder-compatible TSV format{}:",
+                        if count == 1 { "" } else { "s" },
+                        if self.annotation.is_some() {
+                            " with Region and Gene columns"
+                        } else {
+                            ""
+                        }
                     ))
                     .size(11.5)
                     .color(MUTED),
@@ -817,34 +979,57 @@ fn results_table(ui: &mut egui::Ui, result: &OffTargetResult) {
         return;
     }
 
+    let annotated = result.sites.iter().any(|site| site.annotation.is_some());
     egui::Frame::new()
         .fill(CARD)
         .corner_radius(8)
         .stroke(Stroke::new(1.0, BORDER))
         .inner_margin(Margin::same(0))
         .show(ui, |ui| {
-            TableBuilder::new(ui)
+            let mut table = TableBuilder::new(ui)
                 .striped(true)
                 .resizable(false)
                 .auto_shrink([false, false])
                 .cell_layout(Layout::left_to_right(Align::Center))
                 .column(Column::exact(38.0))
-                .column(Column::exact(130.0).clip(true))
-                .column(Column::exact(92.0))
-                .column(Column::exact(48.0))
-                .column(Column::exact(52.0))
-                .column(Column::remainder().at_least(260.0).clip(true))
-                .column(Column::exact(66.0))
+                .column(Column::exact(120.0).clip(true))
+                .column(Column::exact(88.0));
+            if annotated {
+                table = table
+                    .column(Column::exact(86.0))
+                    .column(Column::exact(118.0).clip(true));
+            }
+            table = table
+                .column(Column::exact(44.0))
+                .column(Column::exact(46.0))
+                .column(Column::remainder().at_least(230.0).clip(true))
+                .column(Column::exact(60.0));
+            table
                 .header(27.0, |mut header| {
-                    for label in [
-                        "#",
-                        "Contig",
-                        "Location",
-                        "Strand",
-                        "MM",
-                        "Guide (guide orientation)",
-                        "PAM",
-                    ] {
+                    let labels = if annotated {
+                        vec![
+                            "#",
+                            "Contig",
+                            "Location",
+                            "Region",
+                            "Gene",
+                            "Strand",
+                            "MM",
+                            "Guide (guide orientation)",
+                            "PAM",
+                        ]
+                    } else {
+                        vec![
+                            "#",
+                            "Contig",
+                            "Location",
+                            "Strand",
+                            "MM",
+                            "Guide (guide orientation)",
+                            "PAM",
+                        ]
+                    };
+                    for label in labels {
                         header.col(|ui| {
                             ui.label(RichText::new(label).size(10.0).strong().color(MUTED));
                         });
@@ -872,6 +1057,26 @@ fn results_table(ui: &mut egui::Ui, result: &OffTargetResult) {
                                     .color(MUTED),
                             );
                         });
+                        if annotated {
+                            row.col(|ui| {
+                                if let Some(annotation) = &site.annotation {
+                                    ui.label(
+                                        RichText::new(annotation.region.label())
+                                            .size(10.5)
+                                            .color(region_color(annotation.region)),
+                                    );
+                                }
+                            });
+                            row.col(|ui| {
+                                if let Some(annotation) = &site.annotation {
+                                    ui.label(
+                                        RichText::new(annotation.gene.as_deref().unwrap_or("—"))
+                                            .size(10.5)
+                                            .color(MUTED),
+                                    );
+                                }
+                            });
+                        }
                         row.col(|ui| {
                             ui.label(
                                 RichText::new(site.strand.symbol().to_string())
@@ -911,6 +1116,14 @@ fn results_table(ui: &mut egui::Ui, result: &OffTargetResult) {
                     });
                 });
         });
+}
+
+fn region_color(region: Region) -> egui::Color32 {
+    match region {
+        Region::Promoter => AMBER,
+        Region::CodingExon | Region::Exon | Region::FivePrimeUtr | Region::ThreePrimeUtr => GREEN,
+        Region::Intron | Region::GeneBody | Region::Intergenic => MUTED,
+    }
 }
 
 fn site_dna_job(ui: &egui::Ui, dna: &str) -> egui::text::LayoutJob {
