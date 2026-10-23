@@ -10,8 +10,9 @@
 //!
 //! # Workflow
 //!
-//! 1. Paste a DNA sequence or FASTA record, load a FASTA file, or press
-//!    **TP53 demo** to try the built-in example.
+//! 1. Paste a DNA sequence or FASTA record, load a FASTA file with the
+//!    built-in file explorer, or press **TP53 demo** to try the built-in
+//!    example.
 //! 2. Choose **SpCas9** (20 nt guide, 3′ `NGG`, Rule Set 3) or **Cpf1
 //!    (Cas12a)** (23 nt guide, 5′ `TTTV`, SeqDeepCpf1).
 //! 3. Choose the tracrRNA for Cas9 (`Hsu2013` or `Chen2013`), whether to scan
@@ -23,10 +24,12 @@
 //!    action.
 //! 6. In the off-target window, choose the PAM pattern, mismatch limit,
 //!    both-strands toggle, and search either the current target sequence or a
-//!    reference genome. Genome loading and searching run in background threads
-//!    with progress and cancellation.
-//! 7. Optionally load a GTF/GFF3 file to annotate each hit with its chromosome
-//!    region and gene. Promoters are 500 bp to 5 kb upstream of a TSS.
+//!    reference genome. Use **Browse…** to locate a FASTA file or a folder of
+//!    chromosome FASTA files. Genome loading and searching run on background
+//!    threads with progress and cancellation.
+//! 7. Optionally load a GTF/GFF3 file (also with **Browse…**) to annotate each
+//!    hit with its chromosome region and gene. Promoters are 500 bp to 5 kb
+//!    upstream of a TSS.
 //! 8. Ranked hits show mismatch counts, strand, 0-based location and the
 //!    guide-oriented DNA with mismatches in lower case. Copy or export the
 //!    results as Cas-OFFinder-compatible TSV.
@@ -41,6 +44,10 @@
 //! * Score heat colors, strand badges and flags for GC/poly-T issues.
 //! * Selected-guide details with the exact context passed to the model.
 //! * Copy selected/all rows to the clipboard, or export TSV to a file.
+//! * Built-in file explorer for sequence, genome and annotation paths and TSV
+//!   destinations. It filters by extension, offers **Home**/**Data** quick
+//!   jumps and detected hg38/annotation shortcuts, supports selecting a folder
+//!   of chromosome FASTA files, and confirms before overwriting an export.
 //!
 //! # Off-target features
 //!
@@ -48,6 +55,8 @@
 //! * Exact IUPAC PAM matching, Hamming mismatches over the guide, both strands,
 //!   and Cas-OFFinder/Bowtie 0-based location conventions.
 //! * Background genome loading and searching with progress and cancel.
+//! * **Browse…** actions open the in-app file explorer for reference FASTA
+//!   files/folders, GTF/GFF3 annotations and TSV exports.
 //! * Ranked mismatch table with lower-case mismatch highlighting.
 //! * Optional GTF/GFF3 region annotation (promoter, exon, UTR, intron,
 //!   intergenic) with the overlapping gene.
@@ -78,6 +87,7 @@
 //! For the reusable engine and command-line tool, see the library crate docs
 //! and the `cas-offinder` binary.
 
+mod file_browser;
 mod off_target_panel;
 mod theme;
 
@@ -87,6 +97,7 @@ use std::path::Path;
 use arachnia::{design, results_tsv, DesignResult, Enzyme, Filters, GuideCandidate, Strand, Tracr};
 use eframe::egui::{self, Align, Color32, FontId, Layout, Margin, RichText, Stroke};
 use egui_extras::{Column, TableBuilder};
+use file_browser::{FileExplorer, FileKind};
 use off_target_panel::OffTargetPanel;
 use theme::*;
 
@@ -159,6 +170,7 @@ struct ArachniaApp {
     frame_count: u32,
     screenshot_done: bool,
     off_target: OffTargetPanel,
+    explorer: FileExplorer,
 }
 
 fn main() -> eframe::Result {
@@ -212,6 +224,7 @@ impl ArachniaApp {
             frame_count: 0,
             screenshot_done: false,
             off_target: OffTargetPanel::default(),
+            explorer: FileExplorer::default(),
         };
         // Development hooks used to regenerate the README screenshots.
         if std::env::var("ARACHNIA_ENZYME")
@@ -1410,6 +1423,16 @@ impl ArachniaApp {
                         if ui.button("Load").clicked() {
                             load_requested = true;
                         }
+                        if ui
+                            .button("Browse…")
+                            .on_hover_text(
+                                "Open the file explorer (FASTA and plain-text sequence files)",
+                            )
+                            .clicked()
+                        {
+                            self.explorer
+                                .open_for_open(FileKind::Sequence, &self.load_path);
+                        }
                         if ui.button("Cancel").clicked() {
                             self.load_open = false;
                             self.dialog_error = None;
@@ -1451,6 +1474,13 @@ impl ArachniaApp {
                         if ui.button("Save TSV").clicked() {
                             save_requested = true;
                         }
+                        if ui
+                            .button("Browse…")
+                            .on_hover_text("Choose a folder and TSV file name")
+                            .clicked()
+                        {
+                            self.explorer.open_for_save(FileKind::Tsv, &self.save_path);
+                        }
                         if ui.button("Cancel").clicked() {
                             self.save_open = false;
                             self.dialog_error = None;
@@ -1460,6 +1490,23 @@ impl ArachniaApp {
             self.save_open = open;
             if save_requested {
                 self.save_results();
+            }
+        }
+
+        let explorer_kind = self.explorer.kind();
+        if let Some(path) = self.explorer.show(ctx) {
+            match explorer_kind {
+                FileKind::Sequence => {
+                    self.load_path = path.display().to_string();
+                    self.dialog_error = None;
+                    self.status = format!("Selected sequence file {}", path.display());
+                }
+                FileKind::Tsv => {
+                    self.save_path = path.display().to_string();
+                    self.dialog_error = None;
+                    self.status = format!("TSV export path set to {}", path.display());
+                }
+                FileKind::Genome | FileKind::Annotation => {}
             }
         }
     }

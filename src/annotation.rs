@@ -29,6 +29,18 @@
 //! explicit UTR records at all. Compressed annotation files are not supported;
 //! `scripts/fetch_annotation.sh` downloads and decompresses a GENCODE
 //! annotation into the standard data directory.
+//!
+//! # Memory
+//!
+//! The parser builds interval features for coding exons, UTRs, other exons,
+//! introns, promoters and gene bodies, then sorts and deduplicates them per
+//! contig. GENCODE v49 peaks at about **4.5 GiB** resident for the
+//! comprehensive GTF (7.9 million stored intervals) and **3.5 GiB** for the
+//! basic GTF (5.5 million intervals) in a release build. Combined with an
+//! in-memory hg38 reference and a three-mismatch off-target search, the peak is
+//! about **7.5 GiB** for the comprehensive annotation. Prefer the basic
+//! annotation on memory-constrained machines, and do not load a genome and an
+//! annotation concurrently on a machine with less than 8 GiB of RAM.
 
 use std::collections::{HashMap, HashSet};
 use std::fs::File;

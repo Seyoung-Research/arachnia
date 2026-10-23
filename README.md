@@ -40,6 +40,10 @@ code, and the off-target search engine are embedded in the application.
 - Export visible on-target results or off-target sites as TSV. Off-target TSV
   uses Cas-OFFinder's columns and 0-based locations, with optional `Region` and
   `Gene` columns when annotation is loaded.
+- Built-in **file explorer** for locating sequence and reference FASTA files,
+  GTF/GFF3 annotations and TSV destinations. It filters by file type, remembers
+  the current folder, offers **Home**/**Data** shortcuts and detected
+  hg38/annotation quick picks, and asks before overwriting an existing file.
 - Built-in TP53 CDS demo, so the app is useful immediately.
 - Offline and self-contained: the RuleSet3 ensemble and SeqDeepCpf1 weights
   are embedded in the binary.
@@ -82,10 +86,52 @@ cargo run --release
 The first build downloads and compiles `eframe`/`egui` and `seqfold`, so it may
 take a few minutes.
 
+## Hardware requirements
+
+Arachnia runs on the CPU only. No GPU, CUDA, OpenCL or Python runtime is
+required. Memory is the main constraint for off-target work because whole
+references and annotations are parsed into memory and kept resident for the
+session.
+
+| Workload | RAM minimum | RAM recommended | Disk | CPU |
+| --- | --- | --- | --- | --- |
+| On-target design (TP53 demo, plasmid or amplicon) | 2 GB | 4 GB | under 100 MB | 2 cores |
+| Off-target search of the current target or a small FASTA | 2 GB | 4 GB | under 100 MB | 2 cores |
+| Genome-wide off-target search with hg38, no annotation | 4 GB | 8 GB | 3.1 GiB for `hg38.fa`, plus about 940 MiB during installation | 4 cores; scanning uses all logical cores |
+| Annotation only (GENCODE basic or comprehensive) | 6 GB | 8 GB | 2.4 GiB basic, 3.1 GiB comprehensive | 2 cores |
+| hg38 + GENCODE basic annotation | 8 GB | 12 GB | about 5.5 GiB installed | 4 or more cores |
+| hg38 + GENCODE comprehensive annotation | 12 GB | 16 GB | about 6.2 GiB installed | 4 or more cores |
+
+The memory figures are peak resident-set sizes measured with the release build
+on Linux x86-64:
+
+- hg38 (455 contigs, 3,209,286,105 bp) plus a three-mismatch search: **3.0 GiB**.
+- GENCODE v49 comprehensive GTF (78,691 genes, 507,365 transcripts and
+  7,855,445 stored intervals): **4.5 GiB**.
+- GENCODE v49 basic GTF (78,691 genes, 280,000 transcripts and 5,498,022
+  stored intervals): **3.5 GiB**.
+- hg38 plus the basic annotation and a three-mismatch search: **6.5 GiB**.
+- hg38 plus the comprehensive annotation and a three-mismatch search:
+  **7.5 GiB**.
+
+The GUI, window compositor and operating system need additional memory, so do
+not plan to run at the measured peak. The application binary and embedded
+on-target models add only a few tens of megabytes. Loading hg38 is
+single-threaded and I/O-bound; the off-target scan uses all logical cores
+through Rayon. On a 16-vCPU machine the TP53 three-mismatch search completes in
+about 5 s after the reference is loaded.
+
+If memory is tight, install the smaller GENCODE basic annotation
+(`ARACHNIA_ANNOTATION_KIND=basic ./scripts/fetch_annotation.sh`) and search one
+chromosome FASTA at a time. Swap can prevent an out-of-memory kill but makes
+loading and searching much slower. Compressed FASTA and annotation files are
+not supported; decompress them before loading.
+
 ## Using the app
 
 1. Paste a DNA sequence or FASTA record into the target box, or click
-   **Load file…**. **TP53 demo** restores the built-in example.
+   **Load file…** and use **Browse…** to open the built-in file explorer.
+   **TP53 demo** restores the built-in example.
 2. Choose **SpCas9** or **Cpf1 (Cas12a)**. For Cas9, pick the tracrRNA variant.
 3. Adjust the GC range, minimum score and optional poly-T filter. These filter
    the already-scored candidates live; they do not rescore.
@@ -93,11 +139,15 @@ take a few minutes.
    strand setting automatically rescans if results are already displayed.
 5. Click a row to open the selected-guide panel; use **Copy guide**,
    **Copy context**, **Copy TSV** or **Export TSV…** to take results with you.
+   The export dialog has a **Browse…** action for choosing the destination
+   folder and file name.
 6. Click **Off-targets…** in the selected-guide panel to open the off-target
    window. Choose the PAM pattern and mismatch limit, then search the current
    target sequence or a reference genome. If hg38 is installed locally, the
-   window preselects it; **Use hg38** loads it in one click. Load a GTF/GFF3
-   file in the same window to add region and gene labels.
+   window preselects it; **Use hg38** loads it in one click. Use **Browse…**
+   next to the reference field to pick a FASTA file or a folder of chromosome
+   FASTA files. Load a GTF/GFF3 file in the same window, also with **Browse…**,
+   to add region and gene labels.
 
 The guide sequence and PAM are presented in guide orientation (5′→3′), so a
 Cas9 PAM always reads `NGG` and a Cpf1 PAM always reads `TTTV`. On the minus
@@ -111,6 +161,29 @@ strand the corresponding plus-strand PAM is the reverse complement.
 - If a FASTA file contains multiple records, only the first is used for
   on-target design and a warning is shown. Off-target genome search loads every
   record.
+
+### File explorer
+
+Every path field has a **Browse…** action that opens the built-in file
+explorer. It is also available from the sequence loader and from both TSV
+export dialogs. The explorer:
+
+- Filters by context: FASTA/plain text for sequences, FASTA files and folders
+  for reference genomes, GTF/GFF3 for annotations, and `.tsv` for exports.
+  **All files** reveals other extensions; **Hidden** reveals dot-files.
+- Starts in the folder of the current path, or in the detected hg38/annotation
+  folder when the field is empty. **Home** and **Data** jump to your home
+  directory and `${XDG_DATA_HOME:-$HOME/.local/share}/arachnia`, where the
+  fetch scripts install their files.
+- Shows **Use detected hg38** or **Use detected annotation** shortcuts when a
+  local copy is found. For a reference genome, **Use this folder** selects the
+  current folder, so a directory of per-chromosome FASTA files can be used
+  directly.
+- Saves TSVs by choosing a folder and file name. A missing `.tsv` extension is
+  added, and an existing destination requires a second **Overwrite** click.
+- Lists at most 4,000 entries per folder to keep the UI responsive. It reads
+  directory metadata only and never creates folders; the destination folder
+  must already exist.
 
 ## Off-target analysis
 
@@ -129,8 +202,9 @@ Cas-OFFinder model:
 - **Current target sequence** searches only the sequence in the main target
   box. **Reference genome** loads a FASTA file, or a directory containing
   `.fa`, `.fasta`, `.fna`, `.fas`, `.ffn` or `.seq` files (case-insensitive,
-  sorted by filename). Compressed FASTA is not supported. If a local hg38 is
-  found, it is preselected; **Use hg38** loads it directly.
+  sorted by filename). Use **Browse…** next to the reference field to pick
+  either with the file explorer. Compressed FASTA is not supported. If a local
+  hg38 is found, it is preselected; **Use hg38** loads it directly.
 - Genome loading and searching run on background threads. The progress bar
   reports scanned windows, and **Cancel** stops an in-flight search.
 - Windows containing ambiguous bases in the guide are skipped. Results are
@@ -145,10 +219,11 @@ columns `Id`, `Bulge Type`, `crRNA`, `DNA`, `Chromosome`, `Location`,
 ### Chromosome-region annotation
 
 Load a GTF or GFF3 file in the off-target window to label every site with a
-`Region` and `Gene` (and, for TSV export, the same two extra columns). Both
-1-based inclusive formats are accepted, including GFF3 `Parent` chains and GTF
-records with `gene_id`/`transcript_id` attributes. Compressed `.gz` files are
-not supported; decompress them first.
+`Region` and `Gene` (and, for TSV export, the same two extra columns). Use
+**Browse…** next to the annotation field to choose it with the file explorer.
+Both 1-based inclusive formats are accepted, including GFF3 `Parent` chains and
+GTF records with `gene_id`/`transcript_id` attributes. Compressed `.gz` files
+are not supported; decompress them first.
 
 Regions are assigned from the full guide + PAM window (not just its left edge)
 using this precedence:

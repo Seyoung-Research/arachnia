@@ -66,6 +66,10 @@
 //! * A sortable, searchable guide table with score heat colors and flags.
 //! * A selected-guide panel with the exact model context, approximate cut
 //!   site, copy actions and an **Off-targets…** action.
+//! * A built-in file explorer for sequence and reference FASTA files,
+//!   GTF/GFF3 annotations and TSV destinations, with extension filters,
+//!   Home/Data shortcuts, detected hg38/annotation quick picks, folder
+//!   selection for chromosome FASTA directories, and overwrite confirmation.
 //! * An off-target window with PAM pattern, mismatch limit, both-strands
 //!   toggle, current-target or reference-genome search, background loading and
 //!   cancellation, ranked mismatch table, mismatch highlighting, optional
@@ -79,8 +83,8 @@
 //!
 //! ### Desktop workflow
 //!
-//! 1. Paste plain DNA or a FASTA record, use **Load file…**, or click
-//!    **TP53 demo**.
+//! 1. Paste plain DNA or a FASTA record, use **Load file…** and its
+//!    **Browse…** action, or click **TP53 demo**.
 //! 2. Choose SpCas9 or Cpf1. For Cas9, choose the Hsu2013 or Chen2013
 //!    tracrRNA. Adjust the both-strands toggle, GC range, minimum score and
 //!    poly-T filter.
@@ -91,13 +95,15 @@
 //! 5. Click a row to open the selected-guide panel. It shows the full model
 //!    context and approximate cut site, and offers **Copy guide**,
 //!    **Copy context**, **Copy TSV**, **Export TSV…** and **Off-targets…**.
+//!    The export dialog has **Browse…** for choosing a TSV destination.
 //! 6. In the off-target window, set the PAM pattern, mismatch limit and
 //!    both-strands toggle, then search the current target sequence or a
-//!    reference genome. Load a GTF/GFF3 annotation to add `Region`/`Gene`
-//!    labels; genome loading and searching run in the background with progress
-//!    and **Cancel**.
+//!    reference genome. Use **Browse…** to locate a FASTA file or a folder of
+//!    chromosome FASTA files. Load a GTF/GFF3 annotation (also via
+//!    **Browse…**) to add `Region`/`Gene` labels; genome loading and searching
+//!    run in the background with progress and **Cancel**.
 //! 7. Copy or export the ranked off-target table as Cas-OFFinder-compatible
-//!    TSV.
+//!    TSV; the export dialog also has a **Browse…** action.
 //!
 //! The window is styled with the “obsidian & crimson” palette defined in the
 //! private `theme` module. Results are not uploaded anywhere; the application

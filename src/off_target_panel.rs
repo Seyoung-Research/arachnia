@@ -22,6 +22,12 @@
 //! site. Install a GENCODE annotation with `scripts/fetch_annotation.sh`; the
 //! field is pre-filled when one is discovered.
 //!
+//! Both reference fields have a **Browse…** action that opens the in-app file
+//! explorer ([`crate::file_browser`]). The genome picker lists FASTA files and
+//! allows the current folder to be selected for per-chromosome directories;
+//! the annotation picker lists GTF/GFF3 files. The off-target export dialog
+//! uses the same explorer in save mode.
+//!
 //! The panel deliberately never loads hg38 automatically: a discovered
 //! reference is preselected, but the user must click **Load** or **Use hg38**
 //! because the assembly occupies about 3.1 GiB of RAM.
@@ -43,6 +49,7 @@ use arachnia::{prepare_sequence, Enzyme, GuideCandidate, Strand};
 use eframe::egui::{self, Align, FontId, Layout, Margin, RichText, Stroke};
 use egui_extras::{Column, TableBuilder};
 
+use crate::file_browser::{FileExplorer, FileKind};
 use crate::theme::*;
 
 struct SearchState {
@@ -54,7 +61,9 @@ struct SearchState {
 #[derive(Default)]
 struct Actions {
     load_genome: bool,
+    browse_genome: bool,
     load_annotation: bool,
+    browse_annotation: bool,
     clear_annotation: bool,
     search: bool,
     cancel: bool,
@@ -90,6 +99,7 @@ pub(crate) struct OffTargetPanel {
     export_open: bool,
     export_path: String,
     export_error: Option<String>,
+    explorer: FileExplorer,
 }
 
 impl Default for OffTargetPanel {
@@ -132,6 +142,7 @@ impl Default for OffTargetPanel {
             export_open: false,
             export_path: "arachnia_offtargets.tsv".to_string(),
             export_error: None,
+            explorer: FileExplorer::default(),
         }
     }
 }
@@ -172,6 +183,7 @@ impl OffTargetPanel {
     pub(crate) fn show(&mut self, ctx: &egui::Context, target_sequence: &str) {
         self.poll(ctx);
         if !self.open {
+            self.explorer.close();
             return;
         }
 
@@ -198,6 +210,14 @@ impl OffTargetPanel {
         if actions.cancel {
             self.cancel_search();
         }
+        if actions.browse_genome {
+            self.explorer
+                .open_for_open(FileKind::Genome, &self.genome_path);
+        }
+        if actions.browse_annotation {
+            self.explorer
+                .open_for_open(FileKind::Annotation, &self.annotation_path);
+        }
         if actions.load_genome {
             self.start_genome_load(ctx);
         }
@@ -213,6 +233,30 @@ impl OffTargetPanel {
         if self.export_open {
             self.export_window(ctx);
         }
+
+        let explorer_kind = self.explorer.kind();
+        if let Some(path) = self.explorer.show(ctx) {
+            match explorer_kind {
+                FileKind::Genome => {
+                    self.genome_path = path.display().to_string();
+                    self.use_genome = true;
+                    self.genome_error = None;
+                    self.status = format!("Selected reference {}", path.display());
+                }
+                FileKind::Annotation => {
+                    self.annotation_path = path.display().to_string();
+                    self.annotation_error = None;
+                    self.status = format!("Selected annotation {}", path.display());
+                }
+                FileKind::Tsv => {
+                    self.export_path = path.display().to_string();
+                    self.export_error = None;
+                    self.status = format!("Off-target export path set to {}", path.display());
+                }
+                FileKind::Sequence => {}
+            }
+        }
+
         if self.search.is_some() && self.open {
             ctx.request_repaint_after(Duration::from_millis(80));
         }
@@ -452,7 +496,7 @@ impl OffTargetPanel {
                         ui.add_space(6.0);
                         ui.add(
                             egui::TextEdit::singleline(&mut self.genome_path)
-                                .desired_width(400.0)
+                                .desired_width(330.0)
                                 .hint_text("/path/to/genome.fa, /path/to/fasta_dir, or hg38"),
                         );
                         if self.genome_load.is_some() {
@@ -460,6 +504,16 @@ impl OffTargetPanel {
                             ui.label(RichText::new("Loading…").size(10.5).color(MUTED));
                         } else if ui.button("Load").clicked() {
                             actions.load_genome = true;
+                        }
+                        if self.genome_load.is_none()
+                            && ui
+                                .button("Browse…")
+                                .on_hover_text(
+                                    "Open the file explorer (FASTA files and chromosome folders)",
+                                )
+                                .clicked()
+                        {
+                            actions.browse_genome = true;
                         }
                     }
                 });
@@ -506,7 +560,7 @@ impl OffTargetPanel {
                     );
                     ui.add(
                         egui::TextEdit::singleline(&mut self.annotation_path)
-                            .desired_width(520.0)
+                            .desired_width(430.0)
                             .hint_text("/path/to/annotation.gtf or annotation.gff3"),
                     );
                     if self.annotation_load.is_some() {
@@ -514,6 +568,14 @@ impl OffTargetPanel {
                         ui.label(RichText::new("Loading…").size(10.5).color(MUTED));
                     } else if ui.button("Load").clicked() {
                         actions.load_annotation = true;
+                    }
+                    if self.annotation_load.is_none()
+                        && ui
+                            .button("Browse…")
+                            .on_hover_text("Open the file explorer (GTF/GFF3 files)")
+                            .clicked()
+                    {
+                        actions.browse_annotation = true;
                     }
                     if self.annotation.is_some() && ui.button("Clear").clicked() {
                         actions.clear_annotation = true;
@@ -911,6 +973,14 @@ impl OffTargetPanel {
                 ui.horizontal(|ui| {
                     if ui.button("Save TSV").clicked() {
                         save = true;
+                    }
+                    if ui
+                        .button("Browse…")
+                        .on_hover_text("Choose a folder and TSV file name")
+                        .clicked()
+                    {
+                        self.explorer
+                            .open_for_save(FileKind::Tsv, &self.export_path);
                     }
                     if ui.button("Cancel").clicked() {
                         cancel = true;

@@ -33,7 +33,11 @@
 //! FASTA. [`Genome::from_path`] accepts a single FASTA file or a directory of
 //! `.fa`, `.fasta`, `.fna`, `.fas`, `.ffn` and `.seq` files. Compressed FASTA
 //! is not supported. A whole hg38 reference is about 3.1 GiB in memory and
-//! should be loaded in a background thread in a GUI.
+//! should be loaded in a background thread in a GUI. In a release build,
+//! loading hg38 plus a three-mismatch search peaks at about 3.0 GiB resident;
+//! adding the comprehensive GENCODE annotation raises the peak to about
+//! 7.5 GiB, so 8 GiB is a practical minimum for hg38 alone and 16 GiB is
+//! recommended for hg38 plus a comprehensive annotation.
 //!
 //! # Local hg38 discovery
 //!
